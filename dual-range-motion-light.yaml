@@ -17,11 +17,9 @@ blueprint:
       name: Lux Sensor
       description: Light sensor to measure ambient brightness
       selector:
-        target:
-          entity:
-            domain: sensor
-            device_class: 
-              - illuminance
+        entity:
+          domain: sensor
+          device_class: illuminance
     lux_limit:
       name: Lux Limit
       description: Brightness threshold (lux) - above this value uses "bright" lights
