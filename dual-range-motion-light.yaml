@@ -1,0 +1,68 @@
+blueprint:
+  name: Motion Lighting with Dual Lux Ranges
+  description: Turn lights on/off based on motion detection and ambient light levels
+  domain: automation
+  input:
+    occupancy_sensors:
+      name: Occupancy Sensors
+      description: Motion/occupancy sensors to monitor
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class:
+            - occupancy
+            - motion
+          multiple: true
+    lux_sensor:
+      name: Lux Sensor
+      description: Light sensor to measure ambient brightness
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+            - device_class: illuminance
+    lux_limit:
+      name: Lux Limit
+      description: Brightness threshold (lux) - above this value uses "bright" lights
+      default: 50
+      selector:
+        number:
+          min: 1
+          max: 1000
+          step: 1
+          unit_of_measurement: lx
+    lights_dark:
+      name: Lights to turn on when dark
+      description: Lights to activate when lux is at or below the limit
+      selector:
+        target:
+          entity:
+            domain: light
+    lights_bright:
+      name: Lights to turn on when bright
+      description: Lights to activate when lux is above the limit
+      selector:
+        target:
+          entity:
+            domain: light
+    turn_off_delay:
+      name: Turn off delay (minutes)
+      description: Minutes to wait after no motion before turning off lights
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 60
+          step: 1
+          unit_of_measurement: minutes
+
+mode: restart
+max_exceeded: silent
+
+variables:
+  occupancy_sensors: !input occupancy_sensors
+  lux_sensor: !input lux_sensor
+  lux_limit: !input lux_limit
+  lights_dark: !input lights_dark
+  lights_bright: !input lights_bright
+  
