@@ -7,12 +7,12 @@ blueprint:
       name: Occupancy Sensors
       description: Motion/occupancy sensors to monitor
       selector:
-        target:
-          entity:
-            domain: binary_sensor
-            device_class:
-              - occupancy
-              - motion
+        entity:
+          domain: binary_sensor
+          device_class:
+            - occupancy
+            - motion
+          multiple: true
     lux_sensor:
       name: Lux Sensor
       description: Light sensor to measure ambient brightness
