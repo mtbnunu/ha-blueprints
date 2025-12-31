@@ -25,7 +25,7 @@ blueprint:
     lux_limit:
       name: Lux Limit
       description: Brightness threshold (lux) - above this value uses "bright" lights
-      default: 50
+      default: 30
       selector:
         number:
           min: 1
