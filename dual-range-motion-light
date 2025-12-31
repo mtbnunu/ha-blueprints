@@ -1,0 +1,125 @@
+blueprint:
+  name: Motion Lighting with Dual Lux Ranges
+  description: Turn lights on/off based on motion detection and ambient light levels
+  domain: automation
+  input:
+    occupancy_sensors:
+      name: Occupancy Sensors
+      description: Motion/occupancy sensors to monitor
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+          multiple: true
+    lux_sensor:
+      name: Lux Sensor
+      description: Light sensor to measure ambient brightness
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+            - device_class: illuminance
+    lux_limit:
+      name: Lux Limit
+      description: Brightness threshold (lux) - above this value uses "bright" lights
+      default: 50
+      selector:
+        number:
+          min: 1
+          max: 1000
+          step: 1
+          unit_of_measurement: lx
+    lights_dark:
+      name: Lights to turn on when dark
+      description: Lights to activate when lux is at or below the limit
+      selector:
+        entity:
+          filter:
+            - domain: light
+          multiple: true
+    lights_bright:
+      name: Lights to turn on when bright
+      description: Lights to activate when lux is above the limit
+      selector:
+        entity:
+          filter:
+            - domain: light
+          multiple: true
+    turn_off_delay:
+      name: Turn off delay (minutes)
+      description: Minutes to wait after no motion before turning off lights
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 60
+          step: 1
+          unit_of_measurement: minutes
+
+mode: restart
+max_exceeded: silent
+
+variables:
+  occupancy_sensors: !input occupancy_sensors
+  lux_sensor: !input lux_sensor
+  lux_limit: !input lux_limit
+  lights_dark: !input lights_dark
+  lights_bright: !input lights_bright
+  turn_off_delay: !input turn_off_delay
+
+trigger:
+  - platform: state
+    entity_id: !input occupancy_sensors
+    to: "on"
+    id: "motion_detected"
+  - platform: state
+    entity_id: !input occupancy_sensors
+    to: "off"
+    for:
+      minutes: !input turn_off_delay
+    id: "motion_cleared"
+
+condition: []
+
+action:
+  - choose:
+      # Motion detected - turn on appropriate lights only
+      - conditions:
+          - condition: trigger
+            id: "motion_detected"
+        sequence:
+          - choose:
+              # Bright conditions - turn on bright lights only
+              - conditions:
+                  - condition: numeric_state
+                    entity_id: !input lux_sensor
+                    above: !input lux_limit
+                sequence:
+                  - service: light.turn_on
+                    target:
+                      entity_id: !input lights_bright
+            # Dark conditions - turn on dark lights only (default)
+            default:
+              - service: light.turn_on
+                target:
+                  entity_id: !input lights_dark
+      
+      # No motion for delay period - turn off all lights
+      - conditions:
+          - condition: trigger
+            id: "motion_cleared"
+          # Ensure no occupancy sensors are still active
+          - condition: template
+            value_template: >
+              {% set sensors = occupancy_sensors %}
+              {% if sensors is string %}
+                {% set sensors = [sensors] %}
+              {% endif %}
+              {{ sensors | select('is_state', 'on') | list | length == 0 }}
+        sequence:
+          - service: light.turn_off
+            target:
+              entity_id: !input lights_dark
+          - service: light.turn_off
+            target:
+              entity_id: !input lights_bright
