@@ -66,4 +66,56 @@ variables:
   lux_limit: !input lux_limit
   lights_dark: !input lights_dark
   lights_bright: !input lights_bright
-  
+
+trigger:
+  - platform: state
+    entity_id: !input occupancy_sensors
+    to: "on"
+    id: "motion_detected"
+  - platform: state
+    entity_id: !input occupancy_sensors
+    to: "off"
+    for:
+      minutes: !input turn_off_delay
+    id: "motion_cleared"
+
+condition: []
+
+action:
+  - choose:
+      # Motion detected - turn on appropriate lights only
+      - conditions:
+          - condition: trigger
+            id: "motion_detected"
+        sequence:
+          - choose:
+              # Bright conditions - turn on bright lights only
+              - conditions:
+                  - condition: numeric_state
+                    entity_id: !input lux_sensor
+                    above: !input lux_limit
+                sequence:
+                  - service: light.turn_on
+                    target: !input lights_bright
+            # Dark conditions - turn on dark lights only (default)
+            default:
+              - service: light.turn_on
+                target: !input lights_dark
+      
+      # No motion for delay period - turn off all lights
+      - conditions:
+          - condition: trigger
+            id: "motion_cleared"
+          # Ensure no occupancy sensors are still active
+          - condition: template
+            value_template: >
+              {% set sensors = occupancy_sensors %}
+              {% if sensors is string %}
+                {% set sensors = [sensors] %}
+              {% endif %}
+              {{ sensors | select('is_state', 'on') | list | length == 0 }}
+        sequence:
+          - service: light.turn_off
+            target: !input lights_dark
+          - service: light.turn_off
+            target: !input lights_bright
